@@ -1,0 +1,6 @@
+@Treasara.Api_HostAddress = http://localhost:5052
+
+GET {{Treasara.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

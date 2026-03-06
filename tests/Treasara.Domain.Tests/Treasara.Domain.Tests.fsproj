@@ -1,0 +1,40 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="PropertyTests\YieldCurvePropertyTests.fs" />
+    <Compile Include="PropertyTests\BondPropertyTests.fs" />
+    <Compile Include="PropertyTests\ValuationPropertyTests.fs" />
+    <Compile Include="MoneyTests.fs" />
+    <Compile Include="ValuationTests.fs" />
+    <Compile Include="YieldCurveTests.fs" />
+    <Compile Include="CashFlowTests.fs" />
+    <Compile Include="BondCashflowTests.fs" />
+    <Compile Include="SwapTests.fs" />
+    <Compile Include="ScheduleTests.fs" />
+    <Compile Include="BondProjectionTests.fs" />
+    <Compile Include="InstrumentProjectionTests.fs" />
+    <Compile Include="ProjectionTests.fs" />
+    <Compile Include="TradeTests.fs" />
+    <Compile Include="TimeTests.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="FluentAssertions" Version="8.8.0" />
+    <PackageReference Include="FsCheck.Xunit" Version="3.3.2" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="NodaTime" Version="3.3.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Treasara.Domain\Treasara.Domain.fsproj" />
+  </ItemGroup>
+
+</Project>
