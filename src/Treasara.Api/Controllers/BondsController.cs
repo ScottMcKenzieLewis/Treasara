@@ -30,6 +30,8 @@ public sealed class BondsController : ControllerBase
     private readonly IMapper _mapper;
     private readonly IValidator<BondValuationRequestDto> _validator;
     private readonly IBondRequestMapper _bondRequestMapper;
+    private readonly IValidationErrorResponseFactory _validationErrorResponseFactory;
+
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BondsController"/> class.
@@ -40,11 +42,13 @@ public sealed class BondsController : ControllerBase
     public BondsController(
         IMapper mapper,
         IValidator<BondValuationRequestDto> validator,
-        IBondRequestMapper bondRequestMapper)
+        IBondRequestMapper bondRequestMapper,
+        IValidationErrorResponseFactory validationErrorResponseFactory)
     {
         _mapper = mapper;
         _validator = validator;
         _bondRequestMapper = bondRequestMapper;
+        _validationErrorResponseFactory = validationErrorResponseFactory;
     }
 
     /// <summary>
@@ -144,19 +148,7 @@ public sealed class BondsController : ControllerBase
 
         if (!validationResult.IsValid)
         {
-            var errors = validationResult.Errors
-                .GroupBy(e => e.PropertyName)
-                .ToDictionary(
-                    g => g.Key,
-                    g => g.Select(e => e.ErrorMessage).ToArray());
-
-            return BadRequest(new
-            {
-                error = "validation_error",
-                message = "Request validation failed.",
-                details = errors,
-                traceId = HttpContext.TraceIdentifier
-            });
+            return _validationErrorResponseFactory.Create(validationResult, HttpContext.TraceIdentifier);
         }
 
         var bond = _bondRequestMapper.MapToBond(request);

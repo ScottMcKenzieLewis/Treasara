@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 using Treasara.Api.Configuration;
 using Treasara.Api.Dtos.Requests;
+using Treasara.Api.Dtos.Responses;
 using Treasara.Api.Exceptions;
 using Treasara.Api.Mapping.Requests;
 using Treasara.Api.Validators;
@@ -54,6 +55,7 @@ builder.Services.AddAutoMapper(cfg => { }, typeof(Program));
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddScoped<IBondRequestMapper, BondRequestMapper>();
+builder.Services.AddScoped<IValidationErrorResponseFactory, ValidationErrorResponseFactory>();
 
 // Register validators
 ConfigureValidators(builder.Services);
@@ -119,3 +121,6 @@ static void ConfigureValidators(IServiceCollection services)
     // services.AddScoped<IValidator<SwapValuationRequestDto>, SwapValuationRequestValidator>();
 }
 
+public partial class Program
+{
+}
