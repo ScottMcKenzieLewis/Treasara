@@ -117,6 +117,7 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 
 app.UseRateLimiter();
 app.UseRequestLogging();
+app.UseCorrelationId();
 app.MapControllers().RequireRateLimiting("public-api");
 app.Run();
 
