@@ -9,6 +9,7 @@ using Treasara.Api.Dtos.Responses;
 using Treasara.Api.Exceptions;
 using Treasara.Api.Health;
 using Treasara.Api.Mapping.Requests;
+using Treasara.Api.Middleware;
 using Treasara.Api.Validators;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -115,6 +116,7 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 });
 
 app.UseRateLimiter();
+app.UseRequestLogging();
 app.MapControllers().RequireRateLimiting("public-api");
 app.Run();
 

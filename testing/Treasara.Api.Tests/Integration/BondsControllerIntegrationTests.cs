@@ -6,7 +6,7 @@ using Treasara.Api.Dtos.Responses;
 using Treasara.Api.Tests.Infrastructure;
 using Xunit;
 
-namespace Treasara.Api.Tests;
+namespace Treasara.Api.Tests.Integration;
 
 /// <summary>
 /// Integration tests for the BondsController API endpoints.
@@ -62,6 +62,7 @@ public sealed class BondsControllerIntegrationTests : IClassFixture<TreasaraApiF
     /// This is the primary success scenario that validates core valuation functionality.
     /// </remarks>
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task Value_Should_Return200Ok_For_Valid_Request()
     {
         // Arrange
@@ -107,6 +108,7 @@ public sealed class BondsControllerIntegrationTests : IClassFixture<TreasaraApiF
     /// provide actionable feedback to API consumers.
     /// </remarks>
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task Value_Should_Return400BadRequest_For_Invalid_Request()
     {
         // Arrange - Create request with multiple validation errors
@@ -146,6 +148,7 @@ public sealed class BondsControllerIntegrationTests : IClassFixture<TreasaraApiF
     /// clients to understand the valuation calculation and cash flow schedule.
     /// </remarks>
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task Value_Should_Return_Valuation_Lines()
     {
         // Arrange - Create a short-dated bond for predictable cash flow count

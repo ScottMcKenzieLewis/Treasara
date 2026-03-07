@@ -7,7 +7,7 @@ using Treasara.Api.Dtos.Requests;
 using Treasara.Api.Dtos.Responses;
 using Treasara.Api.Tests.Infrastructure;
 
-namespace Treasara.Api.Tests;
+namespace Treasara.Api.Tests.Properties;
 
 /// <summary>
 /// Property-based tests for the BondsController using FsCheck.
@@ -23,7 +23,7 @@ namespace Treasara.Api.Tests;
 /// mathematical properties like linearity, commutativity, or monotonicity should be
 /// preserved across all valid inputs.
 /// </remarks>
-public sealed class BondsControllerPropertyTests : IClassFixture<TreasaraApiFactory>
+public sealed class BondsControllerIntegrationPropertyTests : IClassFixture<TreasaraApiFactory>
 {
     private readonly HttpClient _client;
 
@@ -40,10 +40,10 @@ public sealed class BondsControllerPropertyTests : IClassFixture<TreasaraApiFact
     private const decimal LinearityTolerance = 0.0001m;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="BondsControllerPropertyTests"/> class.
+    /// Initializes a new instance of the <see cref="BondsControllerIntegrationPropertyTests"/> class.
     /// </summary>
     /// <param name="factory">The web application factory for creating test HTTP clients.</param>
-    public BondsControllerPropertyTests(TreasaraApiFactory factory)
+    public BondsControllerIntegrationPropertyTests(TreasaraApiFactory factory)
     {
         _client = factory.CreateClient();
     }
@@ -90,8 +90,9 @@ public sealed class BondsControllerPropertyTests : IClassFixture<TreasaraApiFact
     /// <item><description>The difference between expected and actual values</description></item>
     /// </list>
     /// This makes it easier to diagnose failures when they occur.
-    /// </remarks>
+    /// </remarks>    
     [Property(MaxTest = 10)]
+    [Trait("Category", "Integration")]
     public Property Value_Should_Scale_With_Notional(int baseAmount, int multiplier)
     {
         // Clamp inputs to reasonable ranges to ensure validation passes

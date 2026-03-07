@@ -31,6 +31,7 @@ public sealed class BondsController : ControllerBase
     private readonly IValidator<BondValuationRequestDto> _validator;
     private readonly IBondRequestMapper _bondRequestMapper;
     private readonly IValidationErrorResponseFactory _validationErrorResponseFactory;
+    private readonly ILogger<BondsController> _logger;
 
 
     /// <summary>
@@ -43,12 +44,14 @@ public sealed class BondsController : ControllerBase
         IMapper mapper,
         IValidator<BondValuationRequestDto> validator,
         IBondRequestMapper bondRequestMapper,
-        IValidationErrorResponseFactory validationErrorResponseFactory)
+        IValidationErrorResponseFactory validationErrorResponseFactory,
+        ILogger<BondsController> logger)
     {
         _mapper = mapper;
         _validator = validator;
         _bondRequestMapper = bondRequestMapper;
         _validationErrorResponseFactory = validationErrorResponseFactory;
+        _logger = logger;
     }
 
     /// <summary>
@@ -144,10 +147,20 @@ public sealed class BondsController : ControllerBase
     [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<BondValuationResponseDto>> Value([FromBody] BondValuationRequestDto request)
     {
+        _logger.LogInformation(
+            "Valuing bond request for currency {Currency}, notional {Notional}, issue {IssueDate}, maturity {MaturityDate}",
+            request.Currency,
+            request.Notional,
+            request.IssueDate,
+            request.MaturityDate);
+
         var validationResult = await _validator.ValidateAsync(request);
 
         if (!validationResult.IsValid)
         {
+            _logger.LogWarning(
+                "Validation failed for bond valuation request. TraceId: {TraceId}",
+                HttpContext.TraceIdentifier);
             return _validationErrorResponseFactory.Create(validationResult, HttpContext.TraceIdentifier);
         }
 
@@ -165,6 +178,10 @@ public sealed class BondsController : ControllerBase
                 projection);
 
         var response = _mapper.Map<BondValuationResponseDto>(result);
+
+        _logger.LogInformation(
+            "Bond valuation completed. TotalPresentValue={TotalPresentValue}",
+            response.TotalPresentValue);
 
         return Ok(response);
     }
