@@ -23,4 +23,8 @@
     <ProjectReference Include="..\Treasara.Domain\Treasara.Domain.fsproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Validators\" />
+  </ItemGroup>
+
 </Project>
