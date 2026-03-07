@@ -34,5 +34,5 @@ module CashflowMathTests =
             [ Cashflow.create paymentDate (Money.create 10m USD)
               Cashflow.create paymentDate (Money.create 15m EUR) ]
 
-        Assert.Throws<System.ArgumentException>(fun () -> CashflowMath.sumSameCurrency cashflows |> ignore)
+        Assert.Throws<DomainValidationException>(fun () -> CashflowMath.sumSameCurrency cashflows |> ignore)
         |> ignore

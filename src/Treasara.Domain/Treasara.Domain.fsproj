@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="DomainValidationException.fs" />
     <Compile Include="Id.fs" />
     <Compile Include="Currency.fs" />
     <Compile Include="Money.fs" />

@@ -27,7 +27,7 @@ module MoneyTests =
         let a = Money.create 10m USD
         let b = Money.create 5m EUR
 
-        Assert.Throws<System.ArgumentException>(fun () -> Money.add a b |> ignore)
+        Assert.Throws<DomainValidationException>(fun () -> Money.add a b |> ignore)
         |> ignore
 
     [<Fact>]
@@ -63,5 +63,5 @@ module MoneyTests =
             [ Money.create 10m USD
               Money.create 20m EUR ]
 
-        Assert.Throws<System.ArgumentException>(fun () -> Money.sumSameCurrency monies |> ignore)
+        Assert.Throws<DomainValidationException>(fun () -> Money.sumSameCurrency monies |> ignore)
         |> ignore

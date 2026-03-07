@@ -40,6 +40,6 @@ module ScheduleTests =
     let ``Schedule generation should throw when maturity is not after start`` () =
         let startDate = LocalDate(2026, 1, 1)
 
-        Assert.Throws<System.ArgumentException>(fun () ->
+        Assert.Throws<DomainValidationException>(fun () ->
             Schedule.generate Annual NoRoll startDate startDate |> ignore)
         |> ignore

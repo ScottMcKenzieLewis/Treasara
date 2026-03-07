@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
+using Treasara.Api.Exceptions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,7 +37,18 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddAutoMapper(cfg => { }, typeof(Program));
 
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+
+
 var app = builder.Build();
+
+app.UseExceptionHandler(new ExceptionHandlerOptions
+{
+    // In .NET 10, handled exceptions suppress diagnostics by default.
+    // Set this to false to keep logs/metrics for handled exceptions.
+    SuppressDiagnosticsCallback = _ => false
+});
 
 app.UseSwagger();
 app.UseSwaggerUI();

@@ -38,7 +38,7 @@ module SwapTests =
 
     [<Fact>]
     let ``createFixedLeg should reject negative rate`` () =
-        Assert.Throws<System.ArgumentException>(fun () ->
+        Assert.Throws<DomainValidationException>(fun () ->
             Swap.createFixedLeg
                 (usd 1_000_000m)
                 -0.01m
@@ -53,7 +53,7 @@ module SwapTests =
         let receiveLeg = Swap.createFloatingLeg (usd 1_000_000m) SOFR Quarterly Actual360
         let date = LocalDate(2026, 1, 1)
 
-        Assert.Throws<System.ArgumentException>(fun () ->
+        Assert.Throws<DomainValidationException>(fun () ->
             Swap.create date date payLeg receiveLeg |> ignore)
         |> ignore
 
@@ -62,7 +62,7 @@ module SwapTests =
         let payLeg = Swap.createFixedLeg (usd 1_000_000m) 0.05m SemiAnnual Actual360
         let receiveLeg = Swap.createFloatingLeg (eur 1_000_000m) SOFR Quarterly Actual360
 
-        Assert.Throws<System.ArgumentException>(fun () ->
+        Assert.Throws<DomainValidationException>(fun () ->
             Swap.create
                 (LocalDate(2026, 1, 1))
                 (LocalDate(2031, 1, 1))
@@ -76,7 +76,7 @@ module SwapTests =
         let payLeg = Swap.createFixedLeg (usd 1_000_000m) 0.05m SemiAnnual Actual360
         let receiveLeg = Swap.createFloatingLeg (usd 2_000_000m) SOFR Quarterly Actual360
 
-        Assert.Throws<System.ArgumentException>(fun () ->
+        Assert.Throws<DomainValidationException>(fun () ->
             Swap.create
                 (LocalDate(2026, 1, 1))
                 (LocalDate(2031, 1, 1))
