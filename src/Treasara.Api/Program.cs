@@ -1,11 +1,18 @@
 using Asp.Versioning;
+using FluentValidation;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
+using Treasara.Api.Configuration;
+using Treasara.Api.Dtos.Requests;
 using Treasara.Api.Exceptions;
+using Treasara.Api.Mapping.Requests;
+using Treasara.Api.Validators;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configure services
 builder.Services.AddControllers();
+
 builder.Services.AddApiVersioning(options =>
 {
     options.DefaultApiVersion = new ApiVersion(1, 0);
@@ -20,16 +27,23 @@ builder.Services.AddApiVersioning(options =>
     options.SubstituteApiVersionInUrl = true;
 });
 
+builder.Services.Configure<RateLimitingOptions>(
+    builder.Configuration.GetSection("RateLimiting"));
+
+var rateLimitConfig = builder.Configuration
+    .GetSection("RateLimiting")
+    .Get<RateLimitingOptions>();
+
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
     options.AddFixedWindowLimiter("public-api", limiterOptions =>
     {
-        limiterOptions.PermitLimit = 30;
-        limiterOptions.Window = TimeSpan.FromMinutes(1);
+        limiterOptions.PermitLimit = rateLimitConfig?.PermitLimit ?? 30;
+        limiterOptions.Window = TimeSpan.FromSeconds(rateLimitConfig?.WindowSeconds ?? 60);
+        limiterOptions.QueueLimit = rateLimitConfig?.QueueLimit ?? 0;
         limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        limiterOptions.QueueLimit = 0;
     });
 });
 
@@ -39,10 +53,14 @@ builder.Services.AddAutoMapper(cfg => { }, typeof(Program));
 
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddScoped<IBondRequestMapper, BondRequestMapper>();
 
+// Register validators
+ConfigureValidators(builder.Services);
 
 var app = builder.Build();
 
+// Configure middleware pipeline
 app.UseExceptionHandler(new ExceptionHandlerOptions
 {
     // In .NET 10, handled exceptions suppress diagnostics by default.
@@ -61,14 +79,20 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 // Remove noisy headers
+var securityHeadersSection = builder.Configuration.GetSection("SecurityHeaders");
+var securityHeadersOptions = securityHeadersSection.Get<SecurityHeadersOptions>();
 app.Use(async (context, next) =>
 {
     context.Response.OnStarting(() =>
     {
-        context.Response.Headers.Remove("Server");
-        context.Response.Headers.Remove("X-Powered-By");
-        context.Response.Headers.Remove("X-AspNet-Version");
-        context.Response.Headers.Remove("X-AspNetMvc-Version");
+        if (securityHeadersOptions?.Remove != null)
+        {
+            foreach (var header in securityHeadersOptions.Remove)
+            {
+                context.Response.Headers.Remove(header);
+            }
+        }
+
         return Task.CompletedTask;
     });
 
@@ -77,8 +101,21 @@ app.Use(async (context, next) =>
 
 app.UseRateLimiter();
 app.MapControllers().RequireRateLimiting("public-api");
-
-app.MapControllers();
-
 app.Run();
+
+/// <summary>
+/// Registers all FluentValidation validators with the dependency injection container.
+/// </summary>
+/// <param name="services">The service collection to register validators with.</param>
+/// <remarks>
+/// Validators are registered with scoped lifetime to align with the HTTP request lifecycle.
+/// Add new validator registrations here as the API expands to support additional endpoints.
+/// </remarks>
+static void ConfigureValidators(IServiceCollection services)
+{
+    services.AddScoped<IValidator<BondValuationRequestDto>, BondValuationRequestValidator>();
+    
+    // Add future validators here:
+    // services.AddScoped<IValidator<SwapValuationRequestDto>, SwapValuationRequestValidator>();
+}
 

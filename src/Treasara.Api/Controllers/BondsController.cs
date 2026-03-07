@@ -1,9 +1,12 @@
 ﻿using Asp.Versioning;
 using AutoMapper;
+using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using NodaTime;
+using Treasara.Api.Dtos;
 using Treasara.Api.Dtos.Requests;
 using Treasara.Api.Dtos.Responses;
+using Treasara.Api.Mapping.Requests;
 using Treasara.Domain;
 
 namespace Treasara.Api.Controllers;
@@ -14,6 +17,8 @@ namespace Treasara.Api.Controllers;
 /// <remarks>
 /// Provides endpoints for calculating bond valuations, including present value,
 /// accrued interest, and cash flow projections based on market yield curves.
+/// This controller uses FluentValidation for request validation and custom mappers
+/// to translate API DTOs into domain objects.
 /// </remarks>
 [ApiController]
 [ApiVersion("1.0")]
@@ -23,14 +28,23 @@ namespace Treasara.Api.Controllers;
 public sealed class BondsController : ControllerBase
 {
     private readonly IMapper _mapper;
+    private readonly IValidator<BondValuationRequestDto> _validator;
+    private readonly IBondRequestMapper _bondRequestMapper;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BondsController"/> class.
     /// </summary>
     /// <param name="mapper">The AutoMapper instance for DTO mappings.</param>
-    public BondsController(IMapper mapper)
+    /// <param name="validator">The FluentValidation validator for bond valuation requests.</param>
+    /// <param name="bondRequestMapper">The custom mapper for converting request DTOs to domain objects.</param>
+    public BondsController(
+        IMapper mapper,
+        IValidator<BondValuationRequestDto> validator,
+        IBondRequestMapper bondRequestMapper)
     {
         _mapper = mapper;
+        _validator = validator;
+        _bondRequestMapper = bondRequestMapper;
     }
 
     /// <summary>
@@ -38,8 +52,12 @@ public sealed class BondsController : ControllerBase
     /// </summary>
     /// <param name="request">The bond valuation request containing bond characteristics and market data.</param>
     /// <returns>A detailed bond valuation including present value, accrued interest, and cash flows.</returns>
-    /// <response code="200">Returns the calculated bond valuation.</response>
-    /// <response code="400">If the request contains invalid parameters or unsupported values.</response>
+    /// <response code="200">Returns the calculated bond valuation with detailed cash flow breakdown.</response>
+    /// <response code="400">
+    /// If the request contains invalid parameters. Returns validation errors with field-level details
+    /// including unsupported values for currency, frequency, day count convention, or roll convention.
+    /// </response>
+    /// <response code="500">If an unexpected server error occurs during valuation processing.</response>
     /// <remarks>
     /// Sample request:
     /// 
@@ -50,125 +68,112 @@ public sealed class BondsController : ControllerBase
     ///         "couponRate": 0.05,
     ///         "issueDate": "2024-01-01",
     ///         "maturityDate": "2034-01-01",
-    ///         "valuationDate": "2026-03-06",
+    ///         "valuationDate": "2026-03-07",
     ///         "frequency": "SEMIANNUAL",
-    ///         "dayCount": "ACTUAL360",
+    ///         "dayCount": "THIRTY360",
     ///         "rollConvention": "NOROLL",
     ///         "curveRate": 0.045
     ///     }
     /// 
+    /// Sample response:
+    /// 
+    ///     {
+    ///         "instrumentType": "Bond",
+    ///         "totalPresentValue": 1035420.75,
+    ///         "currency": "USD",
+    ///         "lines": [
+    ///             {
+    ///                 "paymentDate": "2026-07-01",
+    ///                 "cashflowAmount": 25000.00,
+    ///                 "discountFactor": 0.9825,
+    ///                 "presentValue": 24562.50,
+    ///                 "currency": "USD"
+    ///             }
+    ///         ]
+    ///     }
+    /// 
+    /// Validation rules:
+    /// <list type="bullet">
+    /// <item><description>Notional must be positive</description></item>
+    /// <item><description>CouponRate must be non-negative</description></item>
+    /// <item><description>MaturityDate must be after IssueDate</description></item>
+    /// <item><description>ValuationDate must not be before IssueDate</description></item>
+    /// <item><description>All string fields (Currency, Frequency, DayCount, RollConvention) must not be empty</description></item>
+    /// </list>
+    /// 
     /// Supported values:
-    /// - Currency: USD, EUR, GBP
-    /// - Frequency: ANNUAL, SEMIANNUAL, QUARTERLY, MONTHLY
-    /// - DayCount: ACTUAL360, ACTUAL365, THIRTY360
-    /// - RollConvention: NOROLL, ENDOFMONTH
+    /// <list type="table">
+    /// <listheader>
+    /// <term>Parameter</term>
+    /// <description>Valid Values</description>
+    /// </listheader>
+    /// <item>
+    /// <term>Currency</term>
+    /// <description>USD, EUR, GBP (case-insensitive)</description>
+    /// </item>
+    /// <item>
+    /// <term>Frequency</term>
+    /// <description>ANNUAL, SEMIANNUAL, QUARTERLY, MONTHLY (case-insensitive)</description>
+    /// </item>
+    /// <item>
+    /// <term>DayCount</term>
+    /// <description>ACTUAL360, ACTUAL365, THIRTY360 (case-insensitive)</description>
+    /// </item>
+    /// <item>
+    /// <term>RollConvention</term>
+    /// <description>NOROLL, ENDOFMONTH (case-insensitive)</description>
+    /// </item>
+    /// </list>
+    /// 
+    /// The valuation process:
+    /// <list type="number">
+    /// <item><description>Validates the request using FluentValidation rules</description></item>
+    /// <item><description>Maps the request DTO to domain objects (Bond, RollConvention, etc.)</description></item>
+    /// <item><description>Generates a cash flow projection using the bond's payment schedule</description></item>
+    /// <item><description>Discounts each cash flow to present value using the flat yield curve</description></item>
+    /// <item><description>Returns the detailed valuation result with line-by-line breakdown</description></item>
+    /// </list>
     /// </remarks>
     [HttpPost("value")]
     [ProducesResponseType(typeof(BondValuationResponseDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
-    public ActionResult<BondValuationResponseDto> Value([FromBody] BondValuationRequestDto request)
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<BondValuationResponseDto>> Value([FromBody] BondValuationRequestDto request)
     {
-            var currency = MapCurrency(request.Currency);
-            var frequency = MapFrequency(request.Frequency);
-            var dayCount = MapDayCount(request.DayCount);
-            var rollConvention = MapRollConvention(request.RollConvention);
+        var validationResult = await _validator.ValidateAsync(request);
 
-            var notional = NotionalModule.create(request.Notional, currency);
+        if (!validationResult.IsValid)
+        {
+            var errors = validationResult.Errors
+                .GroupBy(e => e.PropertyName)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Select(e => e.ErrorMessage).ToArray());
 
-            var issueDate = ToLocalDate(request.IssueDate);
-            var maturityDate = ToLocalDate(request.MaturityDate);
-            var valuationDate = ToLocalDate(request.ValuationDate);
+            return BadRequest(new
+            {
+                error = "validation_error",
+                message = "Request validation failed.",
+                details = errors,
+                traceId = HttpContext.TraceIdentifier
+            });
+        }
 
-            var bond =
-                BondModule.create(
-                    notional,
-                    request.CouponRate,
-                    issueDate,
-                    maturityDate,
-                    frequency,
-                    dayCount);
+        var bond = _bondRequestMapper.MapToBond(request);
+        var rollConvention = _bondRequestMapper.MapRollConvention(request.RollConvention);
+        var valuationDate = _mapper.Map<LocalDate>(request.ValuationDate);
 
-            var projection = BondProjection.projector(rollConvention, bond);
+        var projection = BondProjection.projector(rollConvention, bond);
 
-            var curve = YieldCurve.NewFlat(request.CurveRate);
+        var result =
+            Valuation.valueProjected(
+                valuationDate,
+                bond.DayCount,
+                YieldCurve.NewFlat(request.CurveRate),
+                projection);
 
-            var result =
-                Valuation.valueProjected(
-                    valuationDate,
-                    dayCount,
-                    YieldCurve.NewFlat(request.CurveRate),
-                    projection);
+        var response = _mapper.Map<BondValuationResponseDto>(result);
 
-            var response = _mapper.Map<BondValuationResponseDto>(result);
-
-            return Ok(response);
+        return Ok(response);
     }
-
-    /// <summary>
-    /// Converts a <see cref="DateOnly"/> value to a NodaTime <see cref="LocalDate"/>.
-    /// </summary>
-    /// <param name="value">The DateOnly value to convert.</param>
-    /// <returns>A NodaTime LocalDate representation.</returns>
-    private static LocalDate ToLocalDate(DateOnly value) =>
-        new(value.Year, value.Month, value.Day);
-
-    /// <summary>
-    /// Maps a string currency code to a <see cref="Currency"/> domain object.
-    /// </summary>
-    /// <param name="value">The currency code (e.g., "USD", "EUR", "GBP").</param>
-    /// <returns>The corresponding Currency domain object.</returns>
-    /// <exception cref="ArgumentException">Thrown when the currency code is not supported.</exception>
-    private static Currency MapCurrency(string value) =>
-        value.Trim().ToUpperInvariant() switch
-        {
-            "USD" => Currency.USD,
-            "EUR" => Currency.EUR,
-            "GBP" => Currency.GBP,
-            _ => throw new ArgumentException($"Unsupported currency '{value}'.")
-        };
-
-    /// <summary>
-    /// Maps a string frequency value to a <see cref="Frequency"/> domain object.
-    /// </summary>
-    /// <param name="value">The frequency value (e.g., "ANNUAL", "SEMIANNUAL", "QUARTERLY", "MONTHLY").</param>
-    /// <returns>The corresponding Frequency domain object.</returns>
-    /// <exception cref="ArgumentException">Thrown when the frequency value is not supported.</exception>
-    private static Frequency MapFrequency(string value) =>
-        value.Trim().ToUpperInvariant() switch
-        {
-            "ANNUAL" => Frequency.Annual,
-            "SEMIANNUAL" => Frequency.SemiAnnual,
-            "QUARTERLY" => Frequency.Quarterly,
-            "MONTHLY" => Frequency.Monthly,
-            _ => throw new ArgumentException($"Unsupported frequency '{value}'.")
-        };
-
-    /// <summary>
-    /// Maps a string day count convention to a <see cref="DayCountConvention"/> domain object.
-    /// </summary>
-    /// <param name="value">The day count convention (e.g., "ACTUAL360", "ACTUAL365", "THIRTY360").</param>
-    /// <returns>The corresponding DayCountConvention domain object.</returns>
-    /// <exception cref="ArgumentException">Thrown when the day count convention is not supported.</exception>
-    private static DayCountConvention MapDayCount(string value) =>
-        value.Trim().ToUpperInvariant() switch
-        {
-            "ACTUAL360" => DayCountConvention.Actual360,
-            "ACTUAL365" => DayCountConvention.Actual365,
-            "THIRTY360" => DayCountConvention.Thirty360,
-            _ => throw new ArgumentException($"Unsupported day count '{value}'.")
-        };
-
-    /// <summary>
-    /// Maps a string roll convention to a <see cref="RollConvention"/> domain object.
-    /// </summary>
-    /// <param name="value">The roll convention (e.g., "NOROLL", "ENDOFMONTH").</param>
-    /// <returns>The corresponding RollConvention domain object.</returns>
-    /// <exception cref="ArgumentException">Thrown when the roll convention is not supported.</exception>
-    private static RollConvention MapRollConvention(string value) =>
-        value.Trim().ToUpperInvariant() switch
-        {
-            "NOROLL" => RollConvention.NoRoll,
-            "ENDOFMONTH" => RollConvention.EndOfMonth,
-            _ => throw new ArgumentException($"Unsupported roll convention '{value}'.")
-        };
 }
