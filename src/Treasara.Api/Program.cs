@@ -1,11 +1,13 @@
 using Asp.Versioning;
 using FluentValidation;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 using Treasara.Api.Configuration;
 using Treasara.Api.Dtos.Requests;
 using Treasara.Api.Dtos.Responses;
 using Treasara.Api.Exceptions;
+using Treasara.Api.Health;
 using Treasara.Api.Mapping.Requests;
 using Treasara.Api.Validators;
 
@@ -56,6 +58,7 @@ builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddScoped<IBondRequestMapper, BondRequestMapper>();
 builder.Services.AddScoped<IValidationErrorResponseFactory, ValidationErrorResponseFactory>();
+builder.Services.AddHealthChecks();
 
 // Register validators
 ConfigureValidators(builder.Services);
@@ -101,6 +104,16 @@ app.Use(async (context, next) =>
     await next();
 });
 
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    ResponseWriter = HealthCheckResponseWriter.WriteResponse
+});
+
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    ResponseWriter = HealthCheckResponseWriter.WriteResponse
+});
+
 app.UseRateLimiter();
 app.MapControllers().RequireRateLimiting("public-api");
 app.Run();
@@ -115,10 +128,7 @@ app.Run();
 /// </remarks>
 static void ConfigureValidators(IServiceCollection services)
 {
-    services.AddScoped<IValidator<BondValuationRequestDto>, BondValuationRequestValidator>();
-    
-    // Add future validators here:
-    // services.AddScoped<IValidator<SwapValuationRequestDto>, SwapValuationRequestValidator>();
+    services.AddScoped<IValidator<BondValuationRequestDto>, BondValuationRequestValidator>();    
 }
 
 public partial class Program
