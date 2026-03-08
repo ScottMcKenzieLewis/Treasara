@@ -1,5 +1,6 @@
-import { Component } from '@angular/core';
-import { environment } from '../../../../environments/environment';
+import { Component, inject } from '@angular/core';
+import { BuildInfoService } from '../../services/build-info.service';
+
 
 @Component({
   selector: 'app-footer',
@@ -8,6 +9,8 @@ import { environment } from '../../../../environments/environment';
   styleUrl: './footer.component.scss',
 })
 export class FooterComponent {
-    readonly buildLabel =
-    `v${environment.appVersion} (${environment.buildLabel})`;
-}
+  private readonly buildInfoService = inject(BuildInfoService);
+
+  get buildLabel(): string {
+    return this.buildInfoService.displayLabel;
+  }}

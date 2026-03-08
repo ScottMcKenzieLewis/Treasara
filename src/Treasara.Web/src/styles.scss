@@ -5,6 +5,8 @@
 // custom components at https://material.angular.dev/guide/theming
 @use '@angular/material' as mat;
 
+@import url('https://fonts.googleapis.com/css2?family=Spectral:wght@500;600&display=swap');
+
 html {
   --tr-background: #f3f6fb;
   --tr-surface: #ffffff;

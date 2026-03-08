@@ -1,5 +1,7 @@
 export const environment = {
   production: false,
-  appVersion: '0.1.0',
-  buildLabel: 'dev'
+  build: {
+    version: '0.1.0',
+    label: 'dev'
+  }
 };
