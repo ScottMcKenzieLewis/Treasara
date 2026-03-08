@@ -1,0 +1,10 @@
+<button
+  type="button"
+  class="theme-toggle"
+  (click)="toggleTheme()"
+  [attr.aria-label]="'Switch theme. Current theme: ' + label">
+  <span class="toggle-track">
+    <span class="toggle-thumb" [class.dark]="themeService.isDark()"></span>
+  </span>
+  <span class="toggle-label">{{ label }}</span>
+</button>

@@ -1,0 +1,80 @@
+.about-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 3.5rem;
+}
+
+.about-stack {
+  width: 100%;
+  max-width: 940px;
+  display: grid;
+  gap: 1.5rem;
+}
+
+.about-card {
+  width: 100%;
+  padding: 2.75rem 3rem;
+  border-radius: 24px;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--tr-surface) 94%, white 6%),
+      var(--tr-surface)
+    );
+  border: 1px solid var(--tr-border);
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.about-title {
+  font-size: clamp(2rem, 4vw, 2.6rem);
+  font-weight: 800;
+  line-height: 1.05;
+  margin: 0 0 1.5rem;
+  letter-spacing: -0.02em;
+}
+
+.version {
+  font-size: 0.95rem;
+  color: var(--tr-text-muted);
+  margin-left: 0.65rem;
+  font-weight: 600;
+}
+
+p {
+  line-height: 1.75;
+  margin: 0 0 1.25rem;
+  color: var(--tr-text);
+  font-size: 1.05rem;
+}
+
+.repo-link {
+  margin-top: 1.25rem;
+  font-weight: 600;
+}
+
+.repo-link a {
+  color: var(--tr-link);
+  text-decoration: none;
+}
+
+.repo-link a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 640px) {
+  .about-wrapper {
+    padding-top: 1.25rem;
+  }
+
+  .about-card {
+    padding: 1.4rem;
+    border-radius: 18px;
+  }
+
+  p {
+    font-size: 1rem;
+  }
+}

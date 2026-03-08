@@ -1,0 +1,48 @@
+:host {
+  display: inline-flex;
+  align-items: center;
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--tr-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.toggle-track {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  padding: 3px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: var(--tr-surface-3);
+  border: 1px solid var(--tr-border);
+  transition: background 180ms ease, border-color 180ms ease;
+}
+
+.toggle-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--tr-brand);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+  transform: translateX(0);
+  transition: transform 180ms ease;
+}
+
+.toggle-thumb.dark {
+  transform: translateX(20px);
+}
+
+.toggle-label {
+  font-size: 0.95rem;
+  color: var(--tr-text-muted);
+}
