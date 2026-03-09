@@ -4,6 +4,6 @@ import { BondValuationPageComponent } from './features/bond-valuation/pages/bond
 
 export const routes: Routes = [
   { path: '', component: AboutComponent },
-  { path: 'valuation', component: BondValuationPageComponent },
+  { path: 'bonds/valuation', component: BondValuationPageComponent },
   { path: 'about', component: AboutComponent }
 ];

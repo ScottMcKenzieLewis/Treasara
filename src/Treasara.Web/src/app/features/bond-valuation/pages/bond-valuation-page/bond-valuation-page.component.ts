@@ -5,7 +5,6 @@ import {
   ReactiveFormsModule,
   Validators
 } from '@angular/forms';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DataTableComponent } from '../../../../shared/data-table/data-table.component';
 import { DataTableColumn } from '../../../../shared/data-table/data-table-column.model';

@@ -6,6 +6,16 @@
     </div>
 
     <nav class="nav">
+      <button type="button" class="nav-link nav-menu-trigger" [matMenuTriggerFor]="bondsMenu">
+        <span>Bonds</span>
+        <span class="nav-caret">▾</span>
+      </button>
+
+      <mat-menu #bondsMenu="matMenu"  panelClass="tr-menu-panel">
+        <button mat-menu-item routerLink="/bonds/valuation">
+          Bond Valuation
+        </button>
+      </mat-menu>
       <a routerLink="/about">About</a>
       <app-theme-toggle></app-theme-toggle>
     </nav>
