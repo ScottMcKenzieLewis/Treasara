@@ -64,14 +64,18 @@ builder.Services.AddHealthChecks();
 // Register validators
 ConfigureValidators(builder.Services);
 
+// CORS
+var allowedOrigins = builder.Configuration
+    .GetSection("CORS:AllowedOrigins")
+    .Get<string[]>() ?? Array.Empty<string>();
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AngularDev", policy =>
+    options.AddPolicy("UiCors", policy =>
     {
-        policy
-            .WithOrigins("http://localhost:4200")
-            .AllowAnyHeader()
-            .AllowAnyMethod();
+        policy.WithOrigins(allowedOrigins)
+              .AllowAnyHeader()
+              .AllowAnyMethod();
     });
 });
 
@@ -85,16 +89,16 @@ app.UseExceptionHandler(new ExceptionHandlerOptions
     SuppressDiagnosticsCallback = _ => false
 });
 
-app.UseSwagger();
-app.UseSwaggerUI();
 
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 app.UseHttpsRedirection();
-app.UseCors("AngularDev");
+app.UseCors("UiCors");
 
 // Remove noisy headers
 var securityHeadersSection = builder.Configuration.GetSection("SecurityHeaders");

@@ -1,6 +1,7 @@
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 type QueryParamValue = string | number | boolean | null | undefined;
 
@@ -11,7 +12,7 @@ export class ApiService {
   private readonly http = inject(HttpClient);
 
   // Later, move this to environment.apiBaseUrl when the API is deployed.
-  private readonly baseUrl = 'https://localhost:7010';
+  private readonly baseUrl = environment.apiBaseUrl;
 
   get<T>(
     path: string,
