@@ -1,0 +1,84 @@
+@if (rows().length > 0) {
+  <div class="table-shell">
+    <div class="table-scroll" [style.max-height]="scrollHeight()">
+      <table class="data-table">
+        <thead>
+          <tr>
+            @for (column of columns(); track column.key) {
+              <th>{{ column.header }}</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of visibleRows(); track $index) {
+            <tr>
+              @for (column of columns(); track column.key) {
+                <td>{{ getCellValue(row, column) }}</td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (enablePaging()) {
+      <div class="pagination-bar">
+        <div class="page-size-picker">
+          <label for="pageSize">Rows</label>
+          <select
+            id="pageSize"
+            [value]="getPageSizeOptionValue(pageSize())"
+            (change)="onPageSizeChange($event)">
+            @for (size of normalizedPageSizeOptions(); track getPageSizeOptionValue(size)) {
+              <option [value]="getPageSizeOptionValue(size)">
+                {{ getPageSizeOptionLabel(size) }}
+              </option>
+            }
+          </select>
+        </div>
+
+        <div class="page-controls">
+          @if (pageSize() === 'all') {
+            <span>Showing all {{ totalRows() }} rows</span>
+          } @else {
+            <button
+              type="button"
+              (click)="goToFirstPage()"
+              [disabled]="!canGoPrevious()">
+              First
+            </button>
+
+            <button
+              type="button"
+              (click)="goToPreviousPage()"
+              [disabled]="!canGoPrevious()">
+              Previous
+            </button>
+
+            <span>
+              Page {{ currentPage() }} of {{ totalPages() }}
+            </span>
+
+            <button
+              type="button"
+              (click)="goToNextPage()"
+              [disabled]="!canGoNext()">
+              Next
+            </button>
+
+            <button
+              type="button"
+              (click)="goToLastPage()"
+              [disabled]="!canGoNext()">
+              Last
+            </button>
+          }
+        </div>
+      </div>
+    }
+  </div>
+} @else {
+  <div class="empty-state">
+    {{ emptyMessage() }}
+  </div>
+}

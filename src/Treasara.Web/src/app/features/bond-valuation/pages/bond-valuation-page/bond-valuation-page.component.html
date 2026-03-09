@@ -1,10 +1,9 @@
 <section class="valuation-page">
   <div class="page-header">
     <div>
-      <p class="eyebrow">Treasara Workbench</p>
       <h1>Bond Valuation</h1>
       <p class="lede">
-        Value a bond using the API and inspect the resulting cash flow breakdown.
+        Value a bond and inspect the resulting cash flow breakdown.
       </p>
     </div>
   </div>
@@ -21,18 +20,29 @@
     <div class="info-panel-body">
       <h3>Non-Technical Explanation</h3>
       <p>
-        This calculator estimates what a bond is worth today by looking at the payments it will make in the future. Bonds typically pay periodic interest (coupons) and return the principal at maturity. The calculator generates that schedule of future payments, ignores any payments that have already occurred, and then adjusts the remaining payments to reflect the time value of money.
+        This calculator estimates what a bond is worth today by looking at the payments it will make in the future.
+        Bonds typically pay periodic interest (coupons) and return the principal at maturity. The calculator generates
+        that schedule of future payments, ignores any payments that have already occurred, and then adjusts the
+        remaining payments to reflect the time value of money.
       </p>
       <p>
-        Because money received in the future is worth less than money today, each future payment is discounted using the supplied interest rate (the curve rate). The discounted payments are then added together to produce the bond’s estimated present value.
+        Because money received in the future is worth less than money today, each future payment is discounted using
+        the supplied interest rate (the curve rate). The discounted payments are then added together to produce the
+        bond’s estimated present value.
       </p>
 
       <h3>Technical Description</h3>
       <p>
-        Treasara values a fixed-rate bond by first generating the full coupon and principal cash-flow schedule based on the bond’s frequency, day-count convention, and roll convention. Cash flows occurring before the valuation date are excluded, leaving only the remaining payment schedule.
+        Treasara values a fixed-rate bond by first generating the full coupon and principal cash-flow schedule based on
+        the bond’s frequency, day-count convention, and roll convention. Cash flows occurring before the valuation date
+        are excluded, leaving only the remaining payment schedule.
       </p>
       <p>
-        Each remaining cash flow is discounted back to the valuation date using a flat yield curve. The discount factor is calculated using the selected day-count convention and the supplied curve rate. The present values of all discounted cash flows are then summed to produce the bond’s total present value. The cash-flow breakdown table shows the individual payment date, cash-flow amount, discount factor, and present value for each remaining payment.
+        Each remaining cash flow is discounted back to the valuation date using a flat yield curve. The discount factor
+        is calculated using the selected day-count convention and the supplied curve rate. The present values of all
+        discounted cash flows are then summed to produce the bond’s total present value. The cash-flow breakdown table
+        shows the individual payment date, cash-flow amount, discount factor, and present value for each remaining
+        payment.
       </p>
     </div>
     }
@@ -48,16 +58,24 @@
       <form class="valuation-form" [formGroup]="form" (ngSubmit)="submit()">
         <div class="field-grid">
           <div class="field">
-            <label for="notional">Notional</label>
-            <input id="notional" type="number" formControlName="notional" />
+            <label for="notional" class="field-label">
+              <span>Notional</span>
+              <trs-info-tip [text]="tooltips.notional"></trs-info-tip>
+            </label>
+            <input id="notional" type="number" formControlName="notional" [trsTooltip]="tooltips.notional"
+              [trsTooltipClass]="'trs-tooltip-panel'" />
             @if (hasError('notional')) {
             <div class="field-error">Notional must be positive.</div>
             }
           </div>
 
           <div class="field">
-            <label for="currency">Currency</label>
-            <select id="currency" formControlName="currency">
+            <label for="currency" class="field-label">
+              <span>Currency</span>
+              <trs-info-tip [text]="tooltips.currency"></trs-info-tip>
+            </label>
+            <select id="currency" formControlName="currency" [trsTooltip]="tooltips.currency"
+              [trsTooltipClass]="'trs-tooltip-panel'">
               @for (option of currencyOptions; track option) {
               <option [value]="option">{{ option }}</option>
               }
@@ -65,39 +83,63 @@
           </div>
 
           <div class="field">
-            <label for="couponRate">Coupon Rate</label>
-            <input id="couponRate" type="number" step="0.0001" formControlName="couponRate" />
+            <label for="couponRate" class="field-label">
+              <span>Coupon Rate</span>
+              <trs-info-tip [text]="tooltips.couponRate"></trs-info-tip>
+            </label>
+            <input id="couponRate" type="number" step="0.0001" formControlName="couponRate"
+              [trsTooltip]="tooltips.couponRate" [trsTooltipClass]="'trs-tooltip-panel'" />
             @if (hasError('couponRate')) {
             <div class="field-error">Coupon rate must be non-negative.</div>
             }
           </div>
 
           <div class="field">
-            <label for="curveRate">Curve Rate</label>
-            <input id="curveRate" type="number" step="0.0001" formControlName="curveRate" />
+            <label for="curveRate" class="field-label">
+              <span>Curve Rate</span>
+              <trs-info-tip [text]="tooltips.curveRate"></trs-info-tip>
+            </label>
+            <input id="curveRate" type="number" step="0.0001" formControlName="curveRate"
+              [trsTooltip]="tooltips.curveRate" [trsTooltipClass]="'trs-tooltip-panel'" />
             @if (hasError('curveRate')) {
             <div class="field-error">Curve rate must be non-negative.</div>
             }
           </div>
 
           <div class="field">
-            <label for="issueDate">Issue Date</label>
-            <input id="issueDate" type="date" formControlName="issueDate" />
+            <label for="issueDate" class="field-label">
+              <span>Issue Date</span>
+              <trs-info-tip [text]="tooltips.issueDate"></trs-info-tip>
+            </label>
+            <input id="issueDate" type="date" formControlName="issueDate" [trsTooltip]="tooltips.issueDate"
+              [trsTooltipClass]="'trs-tooltip-panel'" />
           </div>
 
           <div class="field">
-            <label for="maturityDate">Maturity Date</label>
-            <input id="maturityDate" type="date" formControlName="maturityDate" />
+            <label for="maturityDate" class="field-label">
+              <span>Maturity Date</span>
+              <trs-info-tip [text]="tooltips.maturityDate"></trs-info-tip>
+            </label>
+            <input id="maturityDate" type="date" formControlName="maturityDate" [trsTooltip]="tooltips.maturityDate"
+              [trsTooltipClass]="'trs-tooltip-panel'" />
           </div>
 
           <div class="field">
-            <label for="valuationDate">Valuation Date</label>
-            <input id="valuationDate" type="date" formControlName="valuationDate" />
+            <label for="valuationDate" class="field-label">
+              <span>Valuation Date</span>
+              <trs-info-tip [text]="tooltips.valuationDate"></trs-info-tip>
+            </label>
+            <input id="valuationDate" type="date" formControlName="valuationDate" [trsTooltip]="tooltips.valuationDate"
+              [trsTooltipClass]="'trs-tooltip-panel'" />
           </div>
 
           <div class="field">
-            <label for="frequency">Frequency</label>
-            <select id="frequency" formControlName="frequency">
+            <label for="frequency" class="field-label">
+              <span>Frequency</span>
+              <trs-info-tip [text]="tooltips.frequency"></trs-info-tip>
+            </label>
+            <select id="frequency" formControlName="frequency" [trsTooltip]="tooltips.frequency"
+              [trsTooltipClass]="'trs-tooltip-panel'">
               @for (option of frequencyOptions; track option) {
               <option [value]="option">{{ option }}</option>
               }
@@ -105,8 +147,12 @@
           </div>
 
           <div class="field">
-            <label for="dayCount">Day Count</label>
-            <select id="dayCount" formControlName="dayCount">
+            <label for="dayCount" class="field-label">
+              <span>Day Count</span>
+              <trs-info-tip [text]="tooltips.dayCount"></trs-info-tip>
+            </label>
+            <select id="dayCount" formControlName="dayCount" [trsTooltip]="tooltips.dayCount"
+              [trsTooltipClass]="'trs-tooltip-panel'">
               @for (option of dayCountOptions; track option) {
               <option [value]="option">{{ option }}</option>
               }
@@ -114,8 +160,12 @@
           </div>
 
           <div class="field">
-            <label for="rollConvention">Roll Convention</label>
-            <select id="rollConvention" formControlName="rollConvention">
+            <label for="rollConvention" class="field-label">
+              <span>Roll Convention</span>
+              <trs-info-tip [text]="tooltips.rollConvention"></trs-info-tip>
+            </label>
+            <select id="rollConvention" formControlName="rollConvention" [trsTooltip]="tooltips.rollConvention"
+              [trsTooltipClass]="'trs-tooltip-panel'">
               @for (option of rollConventionOptions; track option) {
               <option [value]="option">{{ option }}</option>
               }
@@ -158,7 +208,6 @@
     <section class="panel summary-panel">
       <div class="panel-header">
         <h2>Valuation Summary</h2>
-        <p>High-level result returned by the API.</p>
       </div>
 
       @if (valuationResult(); as result) {
@@ -198,8 +247,10 @@
       <h2>Cash Flow Breakdown</h2>
       <p>Line-by-line discounted cash flow results.</p>
     </div>
+
     <app-data-table [columns]="cashflowColumns" [rows]="valuationResult()?.lines ?? []"
-      [emptyMessage]="'No cash flow lines yet.'" [scrollHeight]="'360px'" [enablePaging]="true" [initialPageSize]="8">
+      [emptyMessage]="'No cash flow lines yet.'" [scrollHeight]="'360px'" [enablePaging]="true" [initialPageSize]="10"
+      [pageSizeOptions]="[5, 10, 15, 25, 'all']">
     </app-data-table>
   </section>
 </section>

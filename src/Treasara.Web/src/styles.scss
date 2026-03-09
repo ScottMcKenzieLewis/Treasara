@@ -74,3 +74,41 @@ html:not(.dark-theme) body {
     radial-gradient(circle at 50% 0%, rgba(79, 182, 172, 0.12), transparent 28%),
     linear-gradient(180deg, var(--tr-background), var(--tr-background-accent));
 }
+
+/* ================================
+   Treasara Hover Help Card Tooltip
+   ================================ */
+
+.trs-info-tip {
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  vertical-align: middle;
+}
+
+.trs-info-tip .mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  line-height: 18px;
+}
+
+/* slightly soften the tooltip arrow */
+.mat-mdc-tooltip .mdc-tooltip__surface {
+  border-radius: 8px;
+}
+
+.cdk-overlay-container .trs-tooltip-panel .mdc-tooltip__surface {
+  background: #111827;
+  color: #f9fafb;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  max-width: 360px;
+  white-space: pre-line;
+  box-shadow:
+    0 10px 20px rgba(0, 0, 0, 0.25),
+    0 4px 8px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}

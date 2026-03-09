@@ -1,0 +1,75 @@
+:host {
+  display: block;
+}
+
+.table-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.table-scroll {
+  overflow: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th,
+.data-table td {
+  padding: 0.85rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.page-size-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.page-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.page-controls button,
+.page-size-picker select {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  border-radius: 6px;
+  padding: 0.35rem 0.65rem;
+}
+
+.page-controls button:hover:not(:disabled),
+.page-size-picker select:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.page-controls button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.page-size-picker select option {
+  background: #0f172a;
+  color: #f8fafc;
+}
+
+.empty-state {
+  padding: 1rem 0;
+  opacity: 0.8;
+}

@@ -5,9 +5,13 @@ import {
   ReactiveFormsModule,
   Validators
 } from '@angular/forms';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { DataTableComponent } from '../../../../shared/components/data-table/data-table.component';
-import { DataTableColumn } from '../../../../shared/components/data-table/data-table-column.model';
+import { DataTableComponent } from '../../../../shared/data-table/data-table.component';
+import { DataTableColumn } from '../../../../shared/data-table/data-table-column.model';
+import { TrsInfoTipComponent } from '../../../../shared/tooltip/trs-info-tip.component';
+import { TrsTooltipDirective } from '../../../../shared/tooltip/trs-tooltip.directive';
+import { BOND_VALUATION_TOOLTIPS } from './bond-valuation-tooltips';
 import { BondValuationLine } from '../../models/bond-valuation-line.model';
 import { BondValuationApiService } from '../../services/bond-valuation-api.service';
 import { BondValuationResponse } from '../../models/bond-valuation-response.model';
@@ -28,7 +32,9 @@ import { mapApiError } from '../../../../core/utils/api-error.util';
     CommonModule,
     ReactiveFormsModule,
     CurrencyPipe,
-    DataTableComponent
+    DataTableComponent,
+    TrsInfoTipComponent,
+    TrsTooltipDirective,
   ],
   templateUrl: './bond-valuation-page.component.html',
   styleUrl: './bond-valuation-page.component.scss'
@@ -93,6 +99,8 @@ export class BondValuationPageComponent {
     ]
   });
 
+  protected readonly tooltips = BOND_VALUATION_TOOLTIPS;
+
   readonly cashflowColumns: DataTableColumn<BondValuationLine>[] = [
     {
       key: 'paymentDate',
@@ -103,7 +111,7 @@ export class BondValuationPageComponent {
       key: 'cashflowAmount',
       header: 'Cashflow Amount',
       formatter: (row) =>
-        `${row.currency} ${row.cashflowAmount.toLocaleString(undefined, {
+        `${row.cashflowAmount.toLocaleString(undefined, {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2
         })}`
@@ -121,7 +129,7 @@ export class BondValuationPageComponent {
       key: 'presentValue',
       header: 'Present Value',
       formatter: (row) =>
-        `${row.currency} ${row.presentValue.toLocaleString(undefined, {
+        `${row.presentValue.toLocaleString(undefined, {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2
         })}`
