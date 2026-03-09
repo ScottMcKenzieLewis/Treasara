@@ -1,0 +1,205 @@
+<section class="valuation-page">
+  <div class="page-header">
+    <div>
+      <p class="eyebrow">Treasara Workbench</p>
+      <h1>Bond Valuation</h1>
+      <p class="lede">
+        Value a bond using the API and inspect the resulting cash flow breakdown.
+      </p>
+    </div>
+  </div>
+
+  <section class="info-panel">
+    <button type="button" class="info-toggle" (click)="toggleCalculatorInfo()"
+      [attr.aria-expanded]="showCalculatorInfo()">
+      <span class="info-icon">i</span>
+      <span>About this calculator</span>
+      <span class="info-chevron">{{ showCalculatorInfo() ? '−' : '+' }}</span>
+    </button>
+
+    @if (showCalculatorInfo()) {
+    <div class="info-panel-body">
+      <h3>Non-Technical Explanation</h3>
+      <p>
+        This calculator estimates what a bond is worth today by looking at the payments it will make in the future. Bonds typically pay periodic interest (coupons) and return the principal at maturity. The calculator generates that schedule of future payments, ignores any payments that have already occurred, and then adjusts the remaining payments to reflect the time value of money.
+      </p>
+      <p>
+        Because money received in the future is worth less than money today, each future payment is discounted using the supplied interest rate (the curve rate). The discounted payments are then added together to produce the bond’s estimated present value.
+      </p>
+
+      <h3>Technical Description</h3>
+      <p>
+        Treasara values a fixed-rate bond by first generating the full coupon and principal cash-flow schedule based on the bond’s frequency, day-count convention, and roll convention. Cash flows occurring before the valuation date are excluded, leaving only the remaining payment schedule.
+      </p>
+      <p>
+        Each remaining cash flow is discounted back to the valuation date using a flat yield curve. The discount factor is calculated using the selected day-count convention and the supplied curve rate. The present values of all discounted cash flows are then summed to produce the bond’s total present value. The cash-flow breakdown table shows the individual payment date, cash-flow amount, discount factor, and present value for each remaining payment.
+      </p>
+    </div>
+    }
+  </section>
+
+  <div class="layout">
+    <section class="panel form-panel">
+      <div class="panel-header">
+        <h2>Inputs</h2>
+        <p>Populate the bond and market parameters, then calculate.</p>
+      </div>
+
+      <form class="valuation-form" [formGroup]="form" (ngSubmit)="submit()">
+        <div class="field-grid">
+          <div class="field">
+            <label for="notional">Notional</label>
+            <input id="notional" type="number" formControlName="notional" />
+            @if (hasError('notional')) {
+            <div class="field-error">Notional must be positive.</div>
+            }
+          </div>
+
+          <div class="field">
+            <label for="currency">Currency</label>
+            <select id="currency" formControlName="currency">
+              @for (option of currencyOptions; track option) {
+              <option [value]="option">{{ option }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="couponRate">Coupon Rate</label>
+            <input id="couponRate" type="number" step="0.0001" formControlName="couponRate" />
+            @if (hasError('couponRate')) {
+            <div class="field-error">Coupon rate must be non-negative.</div>
+            }
+          </div>
+
+          <div class="field">
+            <label for="curveRate">Curve Rate</label>
+            <input id="curveRate" type="number" step="0.0001" formControlName="curveRate" />
+            @if (hasError('curveRate')) {
+            <div class="field-error">Curve rate must be non-negative.</div>
+            }
+          </div>
+
+          <div class="field">
+            <label for="issueDate">Issue Date</label>
+            <input id="issueDate" type="date" formControlName="issueDate" />
+          </div>
+
+          <div class="field">
+            <label for="maturityDate">Maturity Date</label>
+            <input id="maturityDate" type="date" formControlName="maturityDate" />
+          </div>
+
+          <div class="field">
+            <label for="valuationDate">Valuation Date</label>
+            <input id="valuationDate" type="date" formControlName="valuationDate" />
+          </div>
+
+          <div class="field">
+            <label for="frequency">Frequency</label>
+            <select id="frequency" formControlName="frequency">
+              @for (option of frequencyOptions; track option) {
+              <option [value]="option">{{ option }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="dayCount">Day Count</label>
+            <select id="dayCount" formControlName="dayCount">
+              @for (option of dayCountOptions; track option) {
+              <option [value]="option">{{ option }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="rollConvention">Roll Convention</label>
+            <select id="rollConvention" formControlName="rollConvention">
+              @for (option of rollConventionOptions; track option) {
+              <option [value]="option">{{ option }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="submit" class="primary-button" [disabled]="isSubmitting()">
+            {{ isSubmitting() ? 'Calculating...' : 'Calculate' }}
+          </button>
+
+          <button type="button" class="secondary-button" (click)="resetToDefaults()" [disabled]="isSubmitting()">
+            Reset
+          </button>
+        </div>
+      </form>
+
+      @if (apiError(); as error) {
+      <div class="error-box">
+        <div class="error-title">Request failed</div>
+        <div>{{ error.message }}</div>
+
+        @if (error.details?.length) {
+        <ul>
+          @for (detail of error.details; track detail.message) {
+          <li>
+            @if (detail.field) {
+            <strong>{{ detail.field }}:</strong>
+            }
+            {{ detail.message }}
+          </li>
+          }
+        </ul>
+        }
+      </div>
+      }
+    </section>
+
+    <section class="panel summary-panel">
+      <div class="panel-header">
+        <h2>Valuation Summary</h2>
+        <p>High-level result returned by the API.</p>
+      </div>
+
+      @if (valuationResult(); as result) {
+      <div class="summary-grid">
+        <div class="summary-item">
+          <span class="summary-label">Instrument Type</span>
+          <span class="summary-value">{{ result.instrumentType }}</span>
+        </div>
+
+        <div class="summary-item">
+          <span class="summary-label">Total Present Value</span>
+          <span class="summary-value">
+            {{ result.totalPresentValue | currency:result.currency:'symbol':'1.2-2' }}
+          </span>
+        </div>
+
+        <div class="summary-item">
+          <span class="summary-label">Currency</span>
+          <span class="summary-value">{{ result.currency }}</span>
+        </div>
+
+        <div class="summary-item">
+          <span class="summary-label">Cash Flow Lines</span>
+          <span class="summary-value">{{ lineCount() }}</span>
+        </div>
+      </div>
+      } @else {
+      <div class="empty-state">
+        Submit a valuation request to see summary metrics and cash flow lines.
+      </div>
+      }
+    </section>
+  </div>
+
+  <section class="panel table-panel">
+    <div class="panel-header">
+      <h2>Cash Flow Breakdown</h2>
+      <p>Line-by-line discounted cash flow results.</p>
+    </div>
+    <app-data-table [columns]="cashflowColumns" [rows]="valuationResult()?.lines ?? []"
+      [emptyMessage]="'No cash flow lines yet.'" [scrollHeight]="'360px'" [enablePaging]="true" [initialPageSize]="8">
+    </app-data-table>
+  </section>
+</section>

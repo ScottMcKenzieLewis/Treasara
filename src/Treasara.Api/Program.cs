@@ -64,6 +64,17 @@ builder.Services.AddHealthChecks();
 // Register validators
 ConfigureValidators(builder.Services);
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AngularDev", policy =>
+    {
+        policy
+            .WithOrigins("http://localhost:4200")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
 var app = builder.Build();
 
 // Configure middleware pipeline
@@ -83,6 +94,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCors("AngularDev");
 
 // Remove noisy headers
 var securityHeadersSection = builder.Configuration.GetSection("SecurityHeaders");

@@ -3,15 +3,15 @@
 open NodaTime
 
 type ValuationLine =
-    { PaymentDate : LocalDate
-      CashflowAmount : Money
-      DiscountFactor : decimal
-      PresentValue : Money }
+    { PaymentDate: LocalDate
+      CashflowAmount: Money
+      DiscountFactor: decimal
+      PresentValue: Money }
 
 type ValuationResult<'a> =
-    { Target : 'a
-      Lines : ValuationLine list
-      TotalPresentValue : Money option }
+    { Target: 'a
+      Lines: ValuationLine list
+      TotalPresentValue: Money option }
 
 module Valuation =
 
@@ -44,6 +44,7 @@ module Valuation =
 
         let lines =
             projection.Cashflows
+            |> List.filter (fun cf -> cf.PaymentDate >= valuationDate)
             |> List.map (valueCashflow valuationDate dayCount curve)
 
         let total =

@@ -113,7 +113,12 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
         };
 
         await httpContext.Response.WriteAsync(
-            JsonSerializer.Serialize(dto),
+            JsonSerializer.Serialize(
+                dto,
+                new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                }),
             cancellationToken);
 
         return true;
