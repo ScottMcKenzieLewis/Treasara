@@ -5,6 +5,6 @@
   </Folder>
   <Project Path="src/Treasara.Api/Treasara.Api.csproj" />
   <Project Path="src/Treasara.Domain/Treasara.Domain.fsproj" />
-  <Project Path="testing/Treasara.Api.Tests/Treasara.Api.Tests.csproj" Id="4486853d-8fae-4f91-901e-0c879cdc4449" />
+  <Project Path="tests/Treasara.Api.Tests/Treasara.Api.Tests.csproj" />
   <Project Path="tests/Treasara.Domain.Tests/Treasara.Domain.Tests.fsproj" />
 </Solution>

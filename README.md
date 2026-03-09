@@ -259,6 +259,3 @@ The author assumes no responsibility for financial losses or decisions made base
 ## Authors
 
 - Scott McKenzie Lewis ([@ScottMcKenzieLewis](https://github.com/ScottMcKenzieLewis))
-
-## GitHub:
-https://github.com/ScottMcKenzieLewis
