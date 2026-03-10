@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Serilog;
+using Serilog.Events;
 using Treasara.Api.Configuration;
 using Treasara.Api.Health;
 using Treasara.Api.Middleware;
@@ -49,6 +51,15 @@ namespace Treasara.Api.Extensions;
 public static class WebApplicationExtensions
 {
     /// <summary>
+    /// The key used to store correlation IDs in HttpContext.Items.
+    /// </summary>
+    /// <remarks>
+    /// This constant must match the header name used by <see cref="CorrelationIdMiddleware"/>
+    /// to ensure correlation IDs are properly retrieved from context items and included in logs.
+    /// </remarks>
+    private const string CorrelationIdItemKey = "X-Correlation-Id";
+
+    /// <summary>
     /// Configures the complete HTTP request processing pipeline for the Treasara API.
     /// </summary>
     /// <param name="app">The web application to configure.</param>
@@ -66,14 +77,14 @@ public static class WebApplicationExtensions
     /// <item><description><b>Security Headers</b> - Removes information disclosure headers</description></item>
     /// <item><description><b>Rate Limiter</b> - Applies throttling policies to prevent abuse</description></item>
     /// <item><description><b>Correlation ID</b> - Establishes request correlation for tracing</description></item>
-    /// <item><description><b>Request Logging</b> - Logs request details with timing information</description></item>
+    /// <item><description><b>Serilog Request Logging</b> - Rich structured logging with custom enrichment</description></item>
     /// <item><description><b>Controllers/Endpoints</b> - Actual request processing (mapped separately)</description></item>
     /// </list>
     /// 
     /// Response flow is reversed (bottom-to-top), allowing each middleware to:
     /// <list type="bullet">
     /// <item><description>Add headers to responses (correlation ID, security headers)</description></item>
-    /// <item><description>Log completion information (request logging)</description></item>
+    /// <item><description>Log completion information (Serilog request logging)</description></item>
     /// <item><description>Transform responses (exception handler)</description></item>
     /// </list>
     /// 
@@ -99,19 +110,12 @@ public static class WebApplicationExtensions
     public static WebApplication UseTreasaraApiPipeline(this WebApplication app)
     {
         // Exception handler - Must be first to catch all errors
-        // SuppressDiagnosticsCallback = false ensures exceptions are logged
-        app.UseExceptionHandler(new ExceptionHandlerOptions
-        {
-            SuppressDiagnosticsCallback = _ => false
-        });
+        // Configured to not suppress diagnostics so exceptions are logged properly
+        ConfigureExceptionHandling(app);
 
         // Development-only tools: Swagger UI and OpenAPI
-        if (app.Environment.IsDevelopment())
-        {
-            app.MapOpenApi();      // Map OpenAPI specification endpoint
-            app.UseSwagger();      // Serve OpenAPI JSON
-            app.UseSwaggerUI();    // Serve interactive Swagger UI
-        }
+        // Only enabled in Development environment for security
+        ConfigureDevelopmentTools(app);
 
         // HTTPS redirection - Redirect HTTP to HTTPS
         app.UseHttpsRedirection();
@@ -129,8 +133,9 @@ public static class WebApplicationExtensions
         // Must be before logging so correlation IDs appear in logs
         app.UseCorrelationId();
 
-        // Request logging - Log all requests with timing and correlation data
-        app.UseRequestLogging();
+        // Serilog request logging - Rich structured logging with custom enrichment
+        // Replaces RequestLoggingMiddleware with Serilog's optimized implementation
+        ConfigureSerilogRequestLogging(app);
 
         // Note: Controllers are mapped in MapTreasaraEndpoints()
 
@@ -196,17 +201,11 @@ public static class WebApplicationExtensions
     {
         // Map liveness health check endpoint
         // Used by Kubernetes to determine if the container should be restarted
-        app.MapHealthChecks("/health/live", new HealthCheckOptions
-        {
-            ResponseWriter = HealthCheckResponseWriter.WriteResponse
-        });
+        MapHealthCheck(app, "/health/live");
 
         // Map readiness health check endpoint
         // Used by load balancers to determine if the app can receive traffic
-        app.MapHealthChecks("/health/ready", new HealthCheckOptions
-        {
-            ResponseWriter = HealthCheckResponseWriter.WriteResponse
-        });
+        MapHealthCheck(app, "/health/ready");
 
         // Map all controller endpoints with rate limiting
         // Rate limiting protects the API from abuse and resource exhaustion
@@ -265,7 +264,7 @@ public static class WebApplicationExtensions
     {
         // Retrieve configuration from DI container
         var configuration = app.ApplicationServices.GetRequiredService<IConfiguration>();
-        
+
         // Load security headers configuration
         var options = configuration
             .GetSection("SecurityHeaders")
@@ -315,7 +314,7 @@ public static class WebApplicationExtensions
     /// 
     /// See <see cref="CorrelationIdMiddleware"/> for detailed implementation information.
     /// 
-    /// Note: This method duplicates functionality from <see cref="CorrelationIdExtensions.UseCorrelationId"/>
+    /// Note: This method duplicates functionality from <see cref="CorrelationIdExtensions.UseCorrelationId"/>.
     /// Both are kept for flexibility in different usage scenarios.
     /// </remarks>
     public static IApplicationBuilder UseCorrelationId(this IApplicationBuilder app)
@@ -323,31 +322,255 @@ public static class WebApplicationExtensions
         return app.UseMiddleware<CorrelationIdMiddleware>();
     }
 
+    #region Private Helper Methods
+
     /// <summary>
-    /// Adds the <see cref="RequestLoggingMiddleware"/> to the application's request pipeline.
+    /// Configures global exception handling for the application.
     /// </summary>
-    /// <param name="app">The application builder to configure.</param>
-    /// <returns>The application builder for method chaining.</returns>
+    /// <param name="app">The web application to configure.</param>
     /// <remarks>
-    /// This extension method registers the request logging middleware, which logs all
-    /// HTTP requests with timing information. It should be registered after correlation
-    /// ID middleware to ensure logs include correlation IDs.
-    /// 
-    /// The middleware logs:
+    /// Sets up the exception handler middleware with the following configuration:
     /// <list type="bullet">
-    /// <item><description>Incoming request method and path</description></item>
-    /// <item><description>Request completion status code</description></item>
-    /// <item><description>Request processing duration in milliseconds</description></item>
-    /// <item><description>Correlation ID and trace ID via log scopes</description></item>
+    /// <item><description><b>SuppressDiagnosticsCallback = false</b>: Ensures exceptions are logged even when handled</description></item>
+    /// <item><description>Uses <see cref="GlobalExceptionHandler"/> to transform exceptions into standardized error responses</description></item>
     /// </list>
     /// 
-    /// See <see cref="RequestLoggingMiddleware"/> for detailed implementation information.
+    /// In .NET 10+, handled exceptions suppress diagnostics by default. Setting
+    /// SuppressDiagnosticsCallback to false ensures that exceptions are still logged
+    /// to Application Insights, Serilog, and other diagnostic systems even after being
+    /// converted to HTTP error responses by the exception handler.
     /// 
-    /// Note: This method duplicates functionality from <see cref="RequestLoggingMiddlewareExtensions.UseRequestLogging"/>
-    /// Both are kept for flexibility in different usage scenarios.
+    /// This is critical for:
+    /// <list type="bullet">
+    /// <item><description>Monitoring and alerting on application errors</description></item>
+    /// <item><description>Troubleshooting production issues</description></item>
+    /// <item><description>Analyzing error trends and patterns</description></item>
+    /// <item><description>Maintaining observability across the application</description></item>
+    /// </list>
     /// </remarks>
-    public static IApplicationBuilder UseRequestLogging(this IApplicationBuilder app)
+    private static void ConfigureExceptionHandling(WebApplication app)
     {
-        return app.UseMiddleware<RequestLoggingMiddleware>();
+        app.UseExceptionHandler(new ExceptionHandlerOptions
+        {
+            // Don't suppress diagnostics - we want exceptions logged even when handled
+            SuppressDiagnosticsCallback = _ => false
+        });
     }
+
+    /// <summary>
+    /// Conditionally enables development tools (Swagger and OpenAPI) based on the hosting environment.
+    /// </summary>
+    /// <param name="app">The web application to configure.</param>
+    /// <remarks>
+    /// Development tools are only enabled when the application is running in the Development environment.
+    /// This ensures that:
+    /// <list type="bullet">
+    /// <item><description>Swagger UI is not exposed in production (security)</description></item>
+    /// <item><description>OpenAPI specification is not publicly accessible (prevents API fingerprinting)</description></item>
+    /// <item><description>Performance overhead of API exploration is avoided in production</description></item>
+    /// </list>
+    /// 
+    /// Enabled endpoints in Development environment:
+    /// <list type="bullet">
+    /// <item><description><c>/openapi/v1.json</c> - OpenAPI specification document</description></item>
+    /// <item><description><c>/swagger</c> - Swagger UI for interactive API documentation</description></item>
+    /// <item><description><c>/swagger/v1/swagger.json</c> - Alternative OpenAPI endpoint</description></item>
+    /// </list>
+    /// 
+    /// In production, API documentation should be:
+    /// <list type="bullet">
+    /// <item><description>Hosted on a separate documentation site</description></item>
+    /// <item><description>Generated during build and published separately</description></item>
+    /// <item><description>Protected behind authentication if sensitive</description></item>
+    /// </list>
+    /// </remarks>
+    private static void ConfigureDevelopmentTools(WebApplication app)
+    {
+        // Early return if not in Development environment
+        if (!app.Environment.IsDevelopment())
+        {
+            return;
+        }
+
+        // Map OpenAPI specification endpoint
+        app.MapOpenApi();
+        
+        // Enable Swagger middleware (serves swagger.json)
+        app.UseSwagger();
+        
+        // Enable Swagger UI (interactive documentation)
+        app.UseSwaggerUI();
+    }
+
+    /// <summary>
+    /// Configures Serilog's request logging middleware with custom message templates and enrichment.
+    /// </summary>
+    /// <param name="app">The web application to configure.</param>
+    /// <remarks>
+    /// This method configures Serilog's built-in request logging middleware, which is more
+    /// efficient and feature-rich than custom request logging middleware. It provides:
+    /// 
+    /// <b>Custom message template:</b>
+    /// <code>
+    /// HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms
+    /// </code>
+    /// 
+    /// This provides a consistent, readable format for all request logs with precise timing.
+    /// 
+    /// <b>Dynamic log level assignment:</b>
+    /// <list type="bullet">
+    /// <item><description><b>Error (500-599)</b>: Server errors or exceptions - requires immediate attention</description></item>
+    /// <item><description><b>Warning (400-499)</b>: Client errors - may indicate API misuse or validation issues</description></item>
+    /// <item><description><b>Information (200-399)</b>: Successful requests - normal operation</description></item>
+    /// </list>
+    /// 
+    /// This intelligent level assignment enables:
+    /// <list type="bullet">
+    /// <item><description>Filtering production logs to show only warnings and errors</description></item>
+    /// <item><description>Alerting on error-level logs (500+ status codes)</description></item>
+    /// <item><description>Analyzing client errors separately from server errors</description></item>
+    /// <item><description>Reducing log volume while maintaining observability</description></item>
+    /// </list>
+    /// 
+    /// <b>Diagnostic context enrichment:</b>
+    /// Automatically adds detailed properties to all request logs:
+    /// 
+    /// <b>Request properties:</b>
+    /// <list type="bullet">
+    /// <item><description><b>RequestHost</b>: Host header value (e.g., "api.example.com")</description></item>
+    /// <item><description><b>RequestScheme</b>: HTTP or HTTPS</description></item>
+    /// <item><description><b>RequestMethod</b>: HTTP method (GET, POST, etc.)</description></item>
+    /// <item><description><b>RequestPath</b>: URL path (e.g., "/api/v1/bonds/value")</description></item>
+    /// <item><description><b>QueryString</b>: Query parameters if present</description></item>
+    /// </list>
+    /// 
+    /// <b>Response properties:</b>
+    /// <list type="bullet">
+    /// <item><description><b>StatusCode</b>: HTTP response status code</description></item>
+    /// <item><description><b>EndpointName</b>: Matched endpoint display name</description></item>
+    /// </list>
+    /// 
+    /// <b>Tracing properties:</b>
+    /// <list type="bullet">
+    /// <item><description><b>TraceIdentifier</b>: ASP.NET Core request trace ID</description></item>
+    /// <item><description><b>CorrelationId</b>: ULID correlation ID from CorrelationIdMiddleware</description></item>
+    /// </list>
+    /// 
+    /// The correlation ID is retrieved from HttpContext.Items where it was stored by
+    /// <see cref="CorrelationIdMiddleware"/>. This enables distributed tracing across
+    /// multiple services and log correlation in centralized logging systems.
+    /// 
+    /// <b>Benefits over custom middleware:</b>
+    /// <list type="bullet">
+    /// <item><description>Optimized performance with minimal allocations</description></item>
+    /// <item><description>Consistent with Serilog ecosystem and patterns</description></item>
+    /// <item><description>Rich diagnostic context automatically available in all logs during request</description></item>
+    /// <item><description>Built-in elapsed time tracking with high precision</description></item>
+    /// <item><description>Proper integration with Serilog configuration and sinks</description></item>
+    /// </list>
+    /// 
+    /// Example log output:
+    /// <code>
+    /// {"@t":"2026-03-10T15:30:45.1234Z","@mt":"HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms","RequestMethod":"GET","RequestPath":"/api/v1/bonds/value","StatusCode":200,"Elapsed":145.2341,"CorrelationId":"01HN3KQVMQXYZ5N8J7G2P4W6ST","TraceIdentifier":"0HMVFE3A4TQKJ:00000001","RequestHost":"localhost:5001","RequestScheme":"https","EndpointName":"BondsController.Value","@l":"Information"}
+    /// </code>
+    /// </remarks>
+    private static void ConfigureSerilogRequestLogging(WebApplication app)
+    {
+        app.UseSerilogRequestLogging(options =>
+        {
+            // Custom message template for consistent, readable log format
+            // Includes method, path, status code, and precise elapsed time
+            options.MessageTemplate =
+                "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
+
+            // Dynamic log level based on response status code
+            // Enables filtering and alerting based on request outcomes
+            options.GetLevel = (httpContext, elapsed, exception) =>
+            {
+                // Server errors (500+) or exceptions -> Error level
+                // Requires immediate attention
+                if (exception is not null || httpContext.Response.StatusCode >= StatusCodes.Status500InternalServerError)
+                {
+                    return LogEventLevel.Error;
+                }
+
+                // Client errors (400-499) -> Warning level
+                // May indicate API misuse or validation issues
+                if (httpContext.Response.StatusCode >= StatusCodes.Status400BadRequest)
+                {
+                    return LogEventLevel.Warning;
+                }
+
+                // Successful requests (200-399) -> Information level
+                // Normal operation
+                return LogEventLevel.Information;
+            };
+
+            // Enrich diagnostic context with detailed request/response information
+            // These properties are available in all logs during the request
+            options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+            {
+                // Request properties - Where did the request come from?
+                diagnosticContext.Set("RequestHost", httpContext.Request.Host.Value);
+                diagnosticContext.Set("RequestScheme", httpContext.Request.Scheme);
+                diagnosticContext.Set("RequestMethod", httpContext.Request.Method);
+                diagnosticContext.Set("RequestPath", httpContext.Request.Path.Value ?? string.Empty);
+                diagnosticContext.Set("QueryString", httpContext.Request.QueryString.Value ?? string.Empty);
+                
+                // Response properties - How did we respond?
+                diagnosticContext.Set("StatusCode", httpContext.Response.StatusCode);
+                diagnosticContext.Set("TraceIdentifier", httpContext.TraceIdentifier);
+
+                // Endpoint information - Which controller/action handled this?
+                if (httpContext.GetEndpoint() is Endpoint endpoint)
+                {
+                    diagnosticContext.Set("EndpointName", endpoint.DisplayName ?? string.Empty);
+                }
+
+                // Correlation ID - Retrieve from HttpContext.Items where CorrelationIdMiddleware stored it
+                // This enables distributed tracing across services
+                if (httpContext.Items.TryGetValue(CorrelationIdItemKey, out var correlationId)
+                    && correlationId is string correlationIdValue
+                    && !string.IsNullOrWhiteSpace(correlationIdValue))
+                {
+                    diagnosticContext.Set("CorrelationId", correlationIdValue);
+                }
+            };
+        });
+    }
+
+    /// <summary>
+    /// Maps a health check endpoint with custom response formatting.
+    /// </summary>
+    /// <param name="app">The web application to configure.</param>
+    /// <param name="pattern">The URL pattern for the health check endpoint.</param>
+    /// <remarks>
+    /// This helper method centralizes health check endpoint mapping to ensure consistency.
+    /// All health check endpoints use the same custom response writer for uniform JSON output.
+    /// 
+    /// The custom response writer (<see cref="HealthCheckResponseWriter.WriteResponse"/>)
+    /// provides structured JSON instead of plain text, including:
+    /// <list type="bullet">
+    /// <item><description>Overall health status</description></item>
+    /// <item><description>Individual check results</description></item>
+    /// <item><description>Timing information</description></item>
+    /// <item><description>Trace ID for correlation</description></item>
+    /// </list>
+    /// 
+    /// Used by <see cref="MapTreasaraEndpoints"/> to map both:
+    /// <list type="bullet">
+    /// <item><description>/health/live - Liveness probe</description></item>
+    /// <item><description>/health/ready - Readiness probe</description></item>
+    /// </list>
+    /// </remarks>
+    private static void MapHealthCheck(WebApplication app, string pattern)
+    {
+        app.MapHealthChecks(pattern, new HealthCheckOptions
+        {
+            // Use custom response writer for structured JSON output
+            ResponseWriter = HealthCheckResponseWriter.WriteResponse
+        });
+    }
+
+    #endregion
 }

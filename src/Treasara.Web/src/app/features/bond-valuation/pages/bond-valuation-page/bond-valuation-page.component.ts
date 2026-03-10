@@ -23,6 +23,7 @@ import {
   ROLL_CONVENTION_OPTIONS
 } from '../../models/bond-valuation-options';
 import { mapApiError } from '../../../../core/utils/api-error.util';
+import { CashFlowChartComponent, CashFlowChartPoint } from '../../../../shared/cash-flow-chart/cash-flow-chart.component';
 
 @Component({
   selector: 'app-bond-valuation-page',
@@ -34,6 +35,7 @@ import { mapApiError } from '../../../../core/utils/api-error.util';
     DataTableComponent,
     TrsInfoTipComponent,
     TrsTooltipDirective,
+    CashFlowChartComponent
   ],
   templateUrl: './bond-valuation-page.component.html',
   styleUrl: './bond-valuation-page.component.scss'
@@ -180,4 +182,28 @@ export class BondValuationPageComponent {
     const control = this.form.controls[controlName];
     return control.invalid && (control.touched || control.dirty);
   }
+
+  readonly cashFlowChartPoints = computed<CashFlowChartPoint[]>(() => {
+    const result = this.valuationResult();
+    const lines = result?.lines ?? [];
+
+    return lines.map((line, index) => ({
+      label: this.formatChartDate(line.paymentDate),
+      cashFlowAmount: Number(line.cashflowAmount ?? 0),
+      presentValue: Number(line.presentValue ?? 0),
+      discountFactor: Number(line.discountFactor ?? 0),
+      isFinal: index === lines.length - 1
+    }));
+  });
+
+  private formatChartDate(value: string | Date): string {
+    const date = value instanceof Date ? value : new Date(value);
+    return Number.isNaN(date.getTime())
+      ? String(value)
+      : new Intl.DateTimeFormat('en-US', {
+        month: 'short',
+        year: '2-digit'
+      }).format(date);
+  }
+
 }

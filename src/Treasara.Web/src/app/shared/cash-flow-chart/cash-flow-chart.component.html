@@ -1,0 +1,24 @@
+<section class="cashflow-chart-card">
+  <div class="cashflow-chart-card__header">
+    <h3>{{ title }}</h3>
+    <p>{{ subtitle }}</p>
+  </div>
+
+  <div class="cashflow-chart-card__body">
+    <canvas #chartCanvas></canvas>
+  </div>
+
+  @if (points.length) {
+    <div class="cashflow-chart-card__legend">
+      <span class="cashflow-chart-card__legend-item">
+        <span class="cashflow-chart-card__legend-swatch"></span>
+        Coupon flows
+      </span>
+
+      <span class="cashflow-chart-card__legend-item">
+        <span class="cashflow-chart-card__legend-swatch cashflow-chart-card__legend-swatch--final"></span>
+        Final redemption
+      </span>
+    </div>
+  }
+</section>

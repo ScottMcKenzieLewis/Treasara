@@ -84,6 +84,11 @@ public static class WebApplicationBuilderExtensions
     /// <item><description><b>Path</b>: Request path (from RequestLoggingMiddleware)</description></item>
     /// </list>
     /// 
+    /// <b>Additional code-based enrichment:</b>
+    /// <list type="bullet">
+    /// <item><description><b>Environment</b>: Development/Production/Testing - Current hosting environment</description></item>
+    /// </list>
+    /// 
     /// <b>Benefits of configuration-driven approach:</b>
     /// <list type="bullet">
     /// <item><description><b>No recompilation</b>: Change log levels and sinks by editing appsettings.json</description></item>
@@ -107,7 +112,7 @@ public static class WebApplicationBuilderExtensions
     /// 
     /// <b>Example log output (with RenderedCompactJsonFormatter):</b>
     /// <code>
-    /// {"@t":"2026-03-10T15:30:45.1234567Z","@mt":"Incoming request {Method} {Path}","Method":"GET","Path":"/api/v1/bonds/value","Application":"Treasara.Api","CorrelationId":"01HN3KQVMQXYZ5N8J7G2P4W6ST","TraceId":"0HMVFE3A4TQKJ:00000001"}
+    /// {"@t":"2026-03-10T15:30:45.1234567Z","@mt":"Incoming request {Method} {Path}","Method":"GET","Path":"/api/v1/bonds/value","Application":"Treasara.Api","Environment":"Production","CorrelationId":"01HN3KQVMQXYZ5N8J7G2P4W6ST","TraceId":"0HMVFE3A4TQKJ:00000001"}
     /// </code>
     /// 
     /// <b>Integration scenarios:</b>
@@ -153,7 +158,12 @@ public static class WebApplicationBuilderExtensions
                 // Enrich logs with properties from log scopes (BeginScope)
                 // Captures CorrelationId, TraceId, Method, Path from middleware
                 // Essential for distributed tracing and request correlation
-                .Enrich.FromLogContext();
+                .Enrich.FromLogContext()
+                
+                // Add hosting environment name (Development, Production, Testing) to all logs
+                // Essential for filtering logs by environment in centralized logging systems
+                // Helps distinguish logs when multiple environments write to the same destination
+                .Enrich.WithProperty("Environment", context.HostingEnvironment.EnvironmentName);
         });
 
         return builder;

@@ -234,12 +234,20 @@
           <span class="summary-value">{{ lineCount() }}</span>
         </div>
       </div>
+
+      @if (cashFlowChartPoints().length) {
+      <app-cash-flow-chart class="summary-chart" *ngIf="cashFlowChartPoints().length"
+        [currency]="form.getRawValue().currency || 'USD'" [points]="cashFlowChartPoints()">
+      </app-cash-flow-chart>
+      }
+
       } @else {
       <div class="empty-state">
         Calculate a valuation request in Inputs to see summary metrics and cash flow lines.
       </div>
       }
     </section>
+
   </div>
 
   <section class="panel table-panel">
