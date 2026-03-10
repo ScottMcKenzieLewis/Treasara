@@ -69,7 +69,7 @@ namespace Treasara.Api.Middleware;
 /// </example>
 public sealed class CorrelationIdMiddleware
 {
-    private const string HeaderName = "X-Correlation-ID";
+    private const string HeaderName = "X-Correlation-Id";
 
     private readonly RequestDelegate _next;
     private readonly ILogger<CorrelationIdMiddleware> _logger;

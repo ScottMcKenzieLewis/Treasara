@@ -8,6 +8,12 @@ Treasara is also an experiment in **domain-driven design across languages**, wit
 
 ---
 
+# Demo
+
+https://treasara.scottmckenzielewis.com/
+
+---
+
 # Features
 
 - Fixed-rate bond valuation
@@ -125,13 +131,17 @@ Given identical inputs, the engine always produces identical outputs.
 
 Financial calculations often form pipelines:
 
-Schedule Generation
-↓
-Cash Flow Construction
-↓
-Discount Factor Calculation
-↓
-Present Value Aggregation
+```mermaid
+flowchart TD
+    A[Schedule Generation]
+    B[Cash Flow Construction]
+    C[Discount Factor Calculation]
+    D[Present Value Aggregation]
+
+    A --> B
+    B --> C
+    C --> D
+```
 
 F# allows these pipelines to be expressed naturally using functional composition.
 

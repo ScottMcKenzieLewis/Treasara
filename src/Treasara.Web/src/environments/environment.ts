@@ -4,5 +4,5 @@ export const environment = {
     version: '0.1.0',
     label: 'dev'
   },
-  apiBaseUrl: 'https://localhost:7010'
+  apiBaseUrl: 'http://localhost:5052'
 };

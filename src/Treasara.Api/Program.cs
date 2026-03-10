@@ -1,155 +1,71 @@
-using Asp.Versioning;
-using FluentValidation;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Microsoft.AspNetCore.RateLimiting;
-using System.Threading.RateLimiting;
-using Treasara.Api.Configuration;
-using Treasara.Api.Dtos.Requests;
-using Treasara.Api.Dtos.Responses;
-using Treasara.Api.Exceptions;
-using Treasara.Api.Health;
-using Treasara.Api.Mapping.Requests;
-using Treasara.Api.Middleware;
-using Treasara.Api.Validators;
+using Treasara.Api.Extensions;
+
+// ============================================================================
+// Treasara API Application Entry Point
+// ============================================================================
+//
+// This is the main entry point for the Treasara fixed-income valuation API.
+// The application uses a minimal hosting model with extension methods to
+// organize configuration into logical groups.
+//
+// Architecture:
+// - ConfigureTreasaraLogging: Sets up structured logging with Serilog
+// - AddTreasaraApi: Registers all services (controllers, validators, mappers, etc.)
+// - UseTreasaraApiPipeline: Configures middleware pipeline (CORS, auth, logging, etc.)
+// - MapTreasaraEndpoints: Maps controllers and health check endpoints
+//
+// See the Extensions folder for detailed configuration of each component.
+// ============================================================================
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure services
-builder.Services.AddControllers();
+// Configure structured logging with Serilog
+// See: WebApplicationBuilderExtensions.cs for logging configuration details
+builder.ConfigureTreasaraLogging();
 
-builder.Services.AddApiVersioning(options =>
-{
-    options.DefaultApiVersion = new ApiVersion(1, 0);
-    options.AssumeDefaultVersionWhenUnspecified = true;
-    options.ReportApiVersions = true;
-    options.ApiVersionReader = new UrlSegmentApiVersionReader();
-})
-.AddMvc()
-.AddApiExplorer(options =>
-{
-    options.GroupNameFormat = "'v'V";
-    options.SubstituteApiVersionInUrl = true;
-});
+// Register application services (DI container configuration)
+// Includes: Controllers, validators, mappers, AutoMapper, FluentValidation, etc.
+// See: ServiceCollectionExtensions.cs for service registration details
+builder.Services.AddTreasaraApi(builder.Configuration);
 
-builder.Services.Configure<RateLimitingOptions>(
-    builder.Configuration.GetSection("RateLimiting"));
-
-var rateLimitConfig = builder.Configuration
-    .GetSection("RateLimiting")
-    .Get<RateLimitingOptions>();
-
-builder.Services.AddRateLimiter(options =>
-{
-    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-
-    options.AddFixedWindowLimiter("public-api", limiterOptions =>
-    {
-        limiterOptions.PermitLimit = rateLimitConfig?.PermitLimit ?? 30;
-        limiterOptions.Window = TimeSpan.FromSeconds(rateLimitConfig?.WindowSeconds ?? 60);
-        limiterOptions.QueueLimit = rateLimitConfig?.QueueLimit ?? 0;
-        limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-    });
-});
-
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-builder.Services.AddAutoMapper(cfg => { }, typeof(Program));
-
-builder.Services.AddProblemDetails();
-builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
-builder.Services.AddScoped<IBondRequestMapper, BondRequestMapper>();
-builder.Services.AddScoped<IValidationErrorResponseFactory, ValidationErrorResponseFactory>();
-builder.Services.AddHealthChecks();
-
-// Register validators
-ConfigureValidators(builder.Services);
-
-// CORS
-var allowedOrigins = builder.Configuration
-    .GetSection("CORS:AllowedOrigins")
-    .Get<string[]>() ?? Array.Empty<string>();
-
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("UiCors", policy =>
-    {
-        policy.WithOrigins(allowedOrigins)
-              .AllowAnyHeader()
-              .AllowAnyMethod();
-    });
-});
-
+// Build the application
 var app = builder.Build();
 
-// Configure middleware pipeline
-app.UseExceptionHandler(new ExceptionHandlerOptions
-{
-    // In .NET 10, handled exceptions suppress diagnostics by default.
-    // Set this to false to keep logs/metrics for handled exceptions.
-    SuppressDiagnosticsCallback = _ => false
-});
+// Configure the HTTP request pipeline (middleware)
+// Includes: Exception handling, CORS, authentication, authorization, rate limiting, etc.
+// See: WebApplicationExtensions.cs for middleware pipeline configuration
+app.UseTreasaraApiPipeline();
 
+// Map API endpoints and health checks
+// Configures routing for controllers and health check endpoints
+// See: WebApplicationExtensions.cs for endpoint mapping details
+app.MapTreasaraEndpoints();
 
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-
-app.UseHttpsRedirection();
-app.UseCors("UiCors");
-
-// Remove noisy headers
-var securityHeadersSection = builder.Configuration.GetSection("SecurityHeaders");
-var securityHeadersOptions = securityHeadersSection.Get<SecurityHeadersOptions>();
-app.Use(async (context, next) =>
-{
-    context.Response.OnStarting(() =>
-    {
-        if (securityHeadersOptions?.Remove != null)
-        {
-            foreach (var header in securityHeadersOptions.Remove)
-            {
-                context.Response.Headers.Remove(header);
-            }
-        }
-
-        return Task.CompletedTask;
-    });
-
-    await next();
-});
-
-app.MapHealthChecks("/health/live", new HealthCheckOptions
-{
-    ResponseWriter = HealthCheckResponseWriter.WriteResponse
-});
-
-app.MapHealthChecks("/health/ready", new HealthCheckOptions
-{
-    ResponseWriter = HealthCheckResponseWriter.WriteResponse
-});
-
-app.UseRateLimiter();
-app.UseRequestLogging();
-app.UseCorrelationId();
-app.MapControllers().RequireRateLimiting("public-api");
+// Start the application and begin listening for requests
 app.Run();
 
 /// <summary>
-/// Registers all FluentValidation validators with the dependency injection container.
+/// Partial class declaration for the Program type, used for integration testing.
 /// </summary>
-/// <param name="services">The service collection to register validators with.</param>
 /// <remarks>
-/// Validators are registered with scoped lifetime to align with the HTTP request lifecycle.
-/// Add new validator registrations here as the API expands to support additional endpoints.
+/// This partial class declaration makes the Program type accessible to test projects,
+/// enabling WebApplicationFactory-based integration tests. Without this declaration,
+/// the implicit Program class generated by top-level statements would be internal
+/// and inaccessible to test assemblies.
+/// 
+/// WebApplicationFactory uses this to bootstrap the application in-memory for testing:
+/// <code>
+/// public class MyTests : IClassFixture&lt;WebApplicationFactory&lt;Program&gt;&gt;
+/// {
+///     // Tests can create HttpClient instances and make requests
+/// }
+/// </code>
+/// 
+/// The partial keyword allows this declaration to be combined with the compiler-generated
+/// Program class, maintaining the clean top-level statements syntax while enabling testability.
+/// 
+/// See: <see href="https://docs.microsoft.com/en-us/aspnet/core/test/integration-tests">ASP.NET Core Integration Tests</see>
 /// </remarks>
-static void ConfigureValidators(IServiceCollection services)
-{
-    services.AddScoped<IValidator<BondValuationRequestDto>, BondValuationRequestValidator>();    
-}
-
 public partial class Program
 {
 }
