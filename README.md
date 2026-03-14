@@ -12,6 +12,30 @@ Treasara is also an experiment in **domain-driven design across languages**, wit
 
 https://treasara.scottmckenzielewis.com/
 
+# Demo Deployment
+```mermaid
+flowchart TD
+    U[Investor / Analyst]
+
+    subgraph AWS[AWS Cloud]
+        DNS[Route 53<br/>DNS]
+        CDN[CloudFront<br/>CDN]
+        FE[S3<br/>Treasara Angular UI]
+        LB[Application Load Balancer]
+        BE[ASP.NET Core Web API<br/>Bond Valuation Services]
+        OBS[CloudWatch<br/>Logs / Metrics]
+    end
+
+    U --> DNS
+    DNS --> CDN
+    CDN --> FE
+    CDN --> LB
+    LB --> BE
+    BE --> OBS
+    LB --> OBS
+    CDN --> OBS
+```
+
 ---
 
 # Features
