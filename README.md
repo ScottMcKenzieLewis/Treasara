@@ -4,7 +4,7 @@
 
 The project currently includes a bond valuation engine capable of generating coupon schedules, discounting cash flows, and computing present value using configurable market conventions.
 
-Treasara is also an experiment in **domain-driven design across languages**, with the financial domain implemented in **F#**, the API layer implemented in **.NET**, and the user interface built with **Angular**.
+Treasara is also an experiment in **domain-driven design across languages**, with the financial domain implemented in **F#**, the API layer implemented in **C# .NET**, and the user interface built with **Angular**.
 
 ---
 
